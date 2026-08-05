@@ -1,0 +1,484 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SEOScope &mdash; Automated Website SEO Audit & Diagnostic Tool</title>
+    <meta name="description" content="SEOScope automatically scans websites, analyzes on-page and technical SEO health, generates detailed scores, and provides downloadable PDF reports.">
+    
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    
+    <!-- FontAwesome & Chart.js CDN -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+    <!-- Custom Style -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body class="dark-theme">
+    <!-- Navbar -->
+    <header class="navbar">
+        <div class="nav-container">
+            <div class="brand">
+                <div class="brand-logo">
+                    <i class="fa-solid fa-compass-drafting"></i>
+                </div>
+                <div class="brand-text">
+                    <span class="brand-title">SEO<span class="highlight">Scope</span></span>
+                    <span class="brand-badge">PRO v2.5</span>
+                </div>
+            </div>
+            
+            <div class="nav-actions">
+                <button class="btn btn-outline" id="btnHistory">
+                    <i class="fa-solid fa-clock-rotate-left"></i> Audit History
+                </button>
+                <div id="userAuthContainer">
+                    <button class="btn btn-primary" id="btnLoginModal">
+                        <i class="fa-solid fa-right-to-bracket"></i> Account Login
+                    </button>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Hero Input Section -->
+    <section class="hero-section">
+        <div class="hero-content">
+            <h1 class="hero-title">Automated Website <span class="gradient-text">SEO Audit Engine</span></h1>
+            <p class="hero-subtitle">Instantly analyze metadata, HTML headings, images, keywords, technical security, and generate exportable PDF reports.</p>
+            
+            <!-- Scan Input Form -->
+            <form id="scanForm" class="scan-box">
+                <div class="input-wrapper">
+                    <i class="fa-solid fa-globe input-icon"></i>
+                    <input type="text" id="urlInput" placeholder="Enter website URL (e.g. example.com or sample-blog.local)..." required autocomplete="off">
+                    <button type="submit" class="btn btn-gradient" id="btnScan">
+                        <i class="fa-solid fa-bolt"></i> Run SEO Audit
+                    </button>
+                </div>
+            </form>
+
+            <!-- Preset Quick Samples -->
+            <div class="quick-samples">
+                <span class="sample-label"><i class="fa-solid fa-flask"></i> Quick Demo Presets:</span>
+                <button class="preset-btn" data-url="sample-blog.local"><i class="fa-solid fa-blog"></i> Optimized Blog (92 Score)</button>
+                <button class="preset-btn" data-url="poor-seo-demo.local"><i class="fa-solid fa-triangle-exclamation"></i> Low SEO Demo (45 Score)</button>
+                <button class="preset-btn" data-url="https://example.com"><i class="fa-solid fa-globe"></i> Example.com</button>
+            </div>
+        </div>
+    </section>
+
+    <!-- Scanning Progress Indicator Modal/Overlay -->
+    <div class="scan-progress-overlay hidden" id="scanOverlay">
+        <div class="scan-progress-card">
+            <div class="spinner-ring"></div>
+            <h3 class="progress-title">Analyzing Website SEO Parameters...</h3>
+            <p class="progress-url" id="progressUrl">https://example.com</p>
+
+            <ul class="progress-checklist">
+                <li id="step1" class="active"><i class="fa-solid fa-spinner fa-spin"></i> Fetching website HTML & HTTP response headers</li>
+                <li id="step2" class="pending"><i class="fa-regular fa-circle"></i> Evaluating Page Title & Meta Description tags</li>
+                <li id="step3" class="pending"><i class="fa-regular fa-circle"></i> Parsing H1-H6 Heading Structure & Hierarchy</li>
+                <li id="step4" class="pending"><i class="fa-regular fa-circle"></i> Inspecting Image ALT Attributes & Optimization</li>
+                <li id="step5" class="pending"><i class="fa-regular fa-circle"></i> Calculating Keyword Densities & Technical SSL Health</li>
+                <li id="step6" class="pending"><i class="fa-regular fa-circle"></i> Generating Overall SEO Score & PDF Report</li>
+            </ul>
+        </div>
+    </div>
+
+    <!-- Main Results Dashboard Container -->
+    <main class="dashboard-container hidden" id="dashboard">
+        <!-- Top Score Banner & Action Tools -->
+        <div class="dashboard-header-card">
+            <div class="header-info">
+                <div class="url-display">
+                    <span class="badge-tag" id="simulatedTag" style="display:none;"><i class="fa-solid fa-circle-info"></i> Sample Audit</span>
+                    <h2 id="displayTargetUrl">https://example.com</h2>
+                    <span class="audit-date" id="displayAuditDate"><i class="fa-regular fa-calendar-check"></i> Scanned 2 mins ago</span>
+                </div>
+            </div>
+
+            <div class="header-export-actions">
+                <button class="btn btn-outline" id="btnDownloadPdf"><i class="fa-solid fa-file-pdf"></i> Download PDF Report</button>
+                <button class="btn btn-outline" id="btnDownloadCsv"><i class="fa-solid fa-file-csv"></i> Export CSV</button>
+                <button class="btn btn-outline" id="btnPrintReport"><i class="fa-solid fa-print"></i> Print</button>
+            </div>
+        </div>
+
+        <!-- Metric Grid Highlights -->
+        <div class="metrics-grid">
+            <!-- Overall Score Ring Card -->
+            <div class="metric-card score-main-card">
+                <div class="score-ring-wrapper">
+                    <svg class="score-ring" viewBox="0 0 120 120">
+                        <circle class="ring-bg" cx="60" cy="60" r="50"></circle>
+                        <circle class="ring-fill" id="scoreRingCircle" cx="60" cy="60" r="50" stroke-dasharray="314" stroke-dashoffset="60"></circle>
+                    </svg>
+                    <div class="score-center-text">
+                        <span class="score-num" id="displayScoreNum">82</span>
+                        <span class="score-total">/ 100</span>
+                    </div>
+                </div>
+                <div class="score-meta">
+                    <span class="score-badge" id="displayRatingGrade">Good Performance</span>
+                    <p class="score-subtext">Overall Website SEO Health Rating</p>
+                </div>
+            </div>
+
+            <!-- Category Scores Cards -->
+            <div class="metric-card category-card">
+                <div class="cat-header">
+                    <i class="fa-solid fa-server cat-icon icon-tech"></i>
+                    <span class="cat-title">Technical SEO</span>
+                    <span class="cat-val" id="catTechVal">90%</span>
+                </div>
+                <div class="progress-bar-bg">
+                    <div class="progress-bar-fill fill-tech" id="catTechBar" style="width: 90%;"></div>
+                </div>
+                <span class="cat-desc">HTTPS, Response Time, Robots & Sitemap</span>
+            </div>
+
+            <div class="metric-card category-card">
+                <div class="cat-header">
+                    <i class="fa-solid fa-file-pen cat-icon icon-content"></i>
+                    <span class="cat-title">Content Optimization</span>
+                    <span class="cat-val" id="catContentVal">75%</span>
+                </div>
+                <div class="progress-bar-bg">
+                    <div class="progress-bar-fill fill-content" id="catContentBar" style="width: 75%;"></div>
+                </div>
+                <span class="cat-desc">Title Tag, Meta Description & H1 Headings</span>
+            </div>
+
+            <div class="metric-card category-card">
+                <div class="cat-header">
+                    <i class="fa-solid fa-image cat-icon icon-images"></i>
+                    <span class="cat-title">Image Optimization</span>
+                    <span class="cat-val" id="catImagesVal">80%</span>
+                </div>
+                <div class="progress-bar-bg">
+                    <div class="progress-bar-fill fill-images" id="catImagesBar" style="width: 80%;"></div>
+                </div>
+                <span class="cat-desc">ALT Text Presence & Image Dimensions</span>
+            </div>
+
+            <div class="metric-card category-card">
+                <div class="cat-header">
+                    <i class="fa-solid fa-link cat-icon icon-links"></i>
+                    <span class="cat-title">Links & Architecture</span>
+                    <span class="cat-val" id="catLinksVal">85%</span>
+                </div>
+                <div class="progress-bar-bg">
+                    <div class="progress-bar-fill fill-links" id="catLinksBar" style="width: 85%;"></div>
+                </div>
+                <span class="cat-desc">Internal Links, External Anchors & Rel attributes</span>
+            </div>
+        </div>
+
+        <!-- Dashboard Tabs Navigation -->
+        <div class="tab-navigation">
+            <button class="tab-btn active" data-tab="tabOverview"><i class="fa-solid fa-chart-pie"></i> Overview</button>
+            <button class="tab-btn" data-tab="tabMetadata"><i class="fa-solid fa-tags"></i> Metadata & Social</button>
+            <button class="tab-btn" data-tab="tabHeadings"><i class="fa-solid fa-heading"></i> Headings & Keywords</button>
+            <button class="tab-btn" data-tab="tabImages"><i class="fa-solid fa-images"></i> Images & Media</button>
+            <button class="tab-btn" data-tab="tabTechnical"><i class="fa-solid fa-shield-halved"></i> Technical & Security</button>
+            <button class="tab-btn" data-tab="tabIssues"><i class="fa-solid fa-bug"></i> Issues Breakdown (<span id="issuesBadgeCount">0</span>)</button>
+            <button class="tab-btn" data-tab="tabRecommendations"><i class="fa-solid fa-list-check"></i> Action Recommendations</button>
+        </div>
+
+        <!-- TAB CONTENT PANELS -->
+        <div class="tab-content-wrapper">
+            <!-- TAB 1: OVERVIEW -->
+            <div class="tab-pane active" id="tabOverview">
+                <div class="overview-grid">
+                    <!-- Chart Box -->
+                    <div class="dashboard-panel">
+                        <h3 class="panel-title"><i class="fa-solid fa-chart-column"></i> Category Breakdown Chart</h3>
+                        <div class="chart-container">
+                            <canvas id="categoryChart"></canvas>
+                        </div>
+                    </div>
+
+                    <!-- Issues Highlight Summary -->
+                    <div class="dashboard-panel">
+                        <h3 class="panel-title"><i class="fa-solid fa-triangle-exclamation"></i> Immediate Audit Highlights</h3>
+                        <div class="issue-summary-boxes">
+                            <div class="summary-box critical-box">
+                                <div class="count" id="overviewCriticalCount">0</div>
+                                <div class="lbl">Critical Errors</div>
+                            </div>
+                            <div class="summary-box warning-box">
+                                <div class="count" id="overviewWarningCount">0</div>
+                                <div class="lbl">SEO Warnings</div>
+                            </div>
+                            <div class="summary-box passed-box">
+                                <div class="count" id="overviewPassedCount">0</div>
+                                <div class="lbl">Passed Checks</div>
+                            </div>
+                        </div>
+
+                        <div class="quick-issues-list" id="overviewQuickIssues">
+                            <!-- Injected dynamically -->
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- TAB 2: METADATA & SOCIAL -->
+            <div class="tab-pane" id="tabMetadata">
+                <div class="panel-grid-2">
+                    <div class="dashboard-panel">
+                        <h3 class="panel-title"><i class="fa-solid fa-heading"></i> Page Title Analysis</h3>
+                        <div class="meta-detail-box">
+                            <div class="meta-item">
+                                <span class="meta-lbl">Title Text:</span>
+                                <div class="meta-val-box" id="metaTitleText">--</div>
+                            </div>
+                            <div class="meta-item-inline">
+                                <span>Character Length: <strong id="metaTitleLen">0</strong> chars</span>
+                                <span class="badge" id="metaTitleBadge">Optimal (50-60 chars)</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="dashboard-panel">
+                        <h3 class="panel-title"><i class="fa-solid fa-align-left"></i> Meta Description Analysis</h3>
+                        <div class="meta-detail-box">
+                            <div class="meta-item">
+                                <span class="meta-lbl">Description Text:</span>
+                                <div class="meta-val-box" id="metaDescText">--</div>
+                            </div>
+                            <div class="meta-item-inline">
+                                <span>Character Length: <strong id="metaDescLen">0</strong> chars</span>
+                                <span class="badge" id="metaDescBadge">Optimal (150-160 chars)</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- SERP Google Preview Card -->
+                <div class="dashboard-panel margin-top">
+                    <h3 class="panel-title"><i class="fa-brands fa-google"></i> Google Search SERP Snippet Preview</h3>
+                    <div class="serp-preview-card">
+                        <div class="serp-url" id="serpUrlPreview">https://example.com</div>
+                        <div class="serp-title" id="serpTitlePreview">Example Title Tag Here</div>
+                        <div class="serp-desc" id="serpDescPreview">Example meta description text will appear here as it would in Google search results snippets...</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- TAB 3: HEADINGS & KEYWORDS -->
+            <div class="tab-pane" id="tabHeadings">
+                <div class="panel-grid-2">
+                    <div class="dashboard-panel">
+                        <h3 class="panel-title"><i class="fa-solid fa-sitemap"></i> Heading Distribution (H1-H6)</h3>
+                        <div class="heading-counters-grid" id="headingCountersGrid">
+                            <!-- Injected dynamically -->
+                        </div>
+                        
+                        <div class="h1-preview-box">
+                            <span class="meta-lbl">Primary H1 Tag:</span>
+                            <div class="h1-text" id="h1TextDisplay">--</div>
+                        </div>
+                    </div>
+
+                    <div class="dashboard-panel">
+                        <h3 class="panel-title"><i class="fa-solid fa-key"></i> Top Keyword Density (Single Words)</h3>
+                        <div class="table-responsive">
+                            <table class="data-table">
+                                <thead>
+                                    <tr>
+                                        <th>Keyword</th>
+                                        <th>Occurrences</th>
+                                        <th>Density %</th>
+                                        <th>Status</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="keywordTableBody">
+                                    <!-- Injected dynamically -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- TAB 4: IMAGES & MEDIA -->
+            <div class="tab-pane" id="tabImages">
+                <div class="dashboard-panel">
+                    <h3 class="panel-title"><i class="fa-solid fa-images"></i> Image Optimization Summary</h3>
+                    <div class="stats-row">
+                        <div class="stat-card">
+                            <div class="stat-num" id="imgTotalNum">0</div>
+                            <div class="stat-lbl">Total Images</div>
+                        </div>
+                        <div class="stat-card warning">
+                            <div class="stat-num" id="imgMissingAltNum">0</div>
+                            <div class="stat-lbl">Missing ALT Text</div>
+                        </div>
+                        <div class="stat-card success">
+                            <div class="stat-num" id="imgOptimizedNum">0</div>
+                            <div class="stat-lbl">Optimized Images</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-num" id="imgAltScoreNum">100%</div>
+                            <div class="stat-lbl">ALT Coverage Score</div>
+                        </div>
+                    </div>
+
+                    <h4 class="subpanel-title margin-top"><i class="fa-solid fa-list-check"></i> Image ALT Diagnostic Details</h4>
+                    <div class="table-responsive">
+                        <table class="data-table">
+                            <thead>
+                                <tr>
+                                    <th>Image Source URL</th>
+                                    <th>ALT Attribute</th>
+                                    <th>Status</th>
+                                </tr>
+                            </thead>
+                            <tbody id="imageDetailsTableBody">
+                                <!-- Injected dynamically -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- TAB 5: TECHNICAL & SECURITY -->
+            <div class="tab-pane" id="tabTechnical">
+                <div class="dashboard-panel">
+                    <h3 class="panel-title"><i class="fa-solid fa-server"></i> Technical & Infrastructure Audit</h3>
+                    <div class="tech-grid">
+                        <div class="tech-card">
+                            <i class="fa-solid fa-lock tech-icon"></i>
+                            <div class="tech-info">
+                                <span class="tech-name">HTTPS / SSL Encryption</span>
+                                <span class="tech-status" id="techHttpsStatus">Active & Secure</span>
+                            </div>
+                        </div>
+
+                        <div class="tech-card">
+                            <i class="fa-solid fa-stopwatch tech-icon"></i>
+                            <div class="tech-info">
+                                <span class="tech-name">Server Response Time</span>
+                                <span class="tech-status" id="techResponseTime">120 ms</span>
+                            </div>
+                        </div>
+
+                        <div class="tech-card">
+                            <i class="fa-solid fa-robot tech-icon"></i>
+                            <div class="tech-info">
+                                <span class="tech-name">Robots.txt Availability</span>
+                                <span class="tech-status" id="techRobotsStatus">Detected</span>
+                            </div>
+                        </div>
+
+                        <div class="tech-card">
+                            <i class="fa-solid fa-map-location-dot tech-icon"></i>
+                            <div class="tech-info">
+                                <span class="tech-name">XML Sitemap Presence</span>
+                                <span class="tech-status" id="techSitemapStatus">Detected</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- TAB 6: ISSUES BREAKDOWN -->
+            <div class="tab-pane" id="tabIssues">
+                <div class="dashboard-panel">
+                    <div class="issues-filter-bar">
+                        <h3 class="panel-title"><i class="fa-solid fa-list-ul"></i> Detailed Audit Issues</h3>
+                        <div class="filter-pills">
+                            <button class="pill-btn active" data-filter="all">All Issues</button>
+                            <button class="pill-btn pill-critical" data-filter="critical">Critical (<span id="filterCritCount">0</span>)</button>
+                            <button class="pill-btn pill-warning" data-filter="warning">Warnings (<span id="filterWarnCount">0</span>)</button>
+                            <button class="pill-btn pill-passed" data-filter="passed">Passed (<span id="filterPassCount">0</span>)</button>
+                        </div>
+                    </div>
+
+                    <div class="issues-list-container" id="fullIssuesList">
+                        <!-- Injected dynamically -->
+                    </div>
+                </div>
+            </div>
+
+            <!-- TAB 7: ACTION RECOMMENDATIONS -->
+            <div class="tab-pane" id="tabRecommendations">
+                <div class="dashboard-panel">
+                    <h3 class="panel-title"><i class="fa-solid fa-wand-magic-sparkles"></i> Priority Actionable Recommendations</h3>
+                    <p class="panel-desc">Follow these prioritized steps to resolve detected SEO issues and boost organic search rankings.</p>
+                    
+                    <div class="recommendations-container" id="recommendationsList">
+                        <!-- Injected dynamically -->
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- History Drawer / Modal -->
+    <div class="modal-overlay hidden" id="historyModal">
+        <div class="modal-card">
+            <div class="modal-header">
+                <h3><i class="fa-solid fa-clock-rotate-left"></i> Previous SEO Audit Reports</h3>
+                <button class="close-btn" id="closeHistoryModal">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="table-responsive">
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>Report ID</th>
+                                <th>Website URL</th>
+                                <th>SEO Score</th>
+                                <th>Date</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="historyTableBody">
+                            <!-- Injected dynamically -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Auth Modal (Login / Register) -->
+    <div class="modal-overlay hidden" id="authModal">
+        <div class="modal-card modal-sm">
+            <div class="modal-header">
+                <h3 id="authModalTitle"><i class="fa-solid fa-user-lock"></i> Account Sign In</h3>
+                <button class="close-btn" id="closeAuthModal">&times;</button>
+            </div>
+            <div class="modal-body">
+                <form id="authForm">
+                    <div class="form-group hidden" id="groupName">
+                        <label for="authName">Full Name</label>
+                        <input type="text" id="authName" placeholder="John Doe">
+                    </div>
+                    <div class="form-group">
+                        <label for="authEmail">Email Address</label>
+                        <input type="email" id="authEmail" placeholder="user@example.com" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="authPassword">Password</label>
+                        <input type="password" id="authPassword" placeholder="••••••••" required>
+                    </div>
+                    <button type="submit" class="btn btn-gradient width-100" id="btnSubmitAuth">Sign In</button>
+                </form>
+                <div class="auth-toggle">
+                    <span id="authToggleText">Don't have an account? <a href="#" id="toggleAuthMode">Create account</a></span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="{{ url_for('static', filename='js/main.js') }}"></script>
+</body>
+</html>
